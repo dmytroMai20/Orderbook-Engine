@@ -10,7 +10,7 @@ Built using **CMake**, **fmt**, and **GoogleTest**.
  - Ported on CMake and changed dependecies to work on Apple/Linux machines
  - Improved concurrency model [TODO]
  - Thread-safety [TODO]
- - Minor bug fixes
+ - Bug fixes
  - Restructured the project, separated into core library and tests
 
 ## Requirements
