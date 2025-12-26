@@ -2,7 +2,7 @@
 
 #include <list>
 #include <exception>
-#include <format>
+#include <fmt/core.h>
 
 #include "OrderType.h"
 #include "Side.h"
@@ -37,14 +37,14 @@ public:
     void Fill(Quantity quantity)
     {
         if (quantity > GetRemainingQuantity())
-            throw std::logic_error(std::format("Order ({}) cannot be filled for more than its remaining quantity.", GetOrderId()));
+            throw std::logic_error(fmt::format("Order ({}) cannot be filled for more than its remaining quantity.", GetOrderId()));
 
         remainingQuantity_ -= quantity;
     }
     void ToGoodTillCancel(Price price) 
     { 
         if (GetOrderType() != OrderType::Market)
-            throw std::logic_error(std::format("Order ({}) cannot have its price adjusted, only market orders can.", GetOrderId()));
+            throw std::logic_error(fmt::format("Order ({}) cannot have its price adjusted, only market orders can.", GetOrderId()));
 
         price_ = price;
         orderType_ = OrderType::GoodTillCancel;

@@ -1,6 +1,6 @@
 #include "pch.h"
-
-#include "../Orderbook.cpp"
+#include <charconv>
+#include "Orderbook.h"
 
 namespace googletest = ::testing;
 
@@ -93,7 +93,7 @@ private:
         std::vector<std::string_view> columns;
         columns.reserve(5);
         std::size_t start_index{}, end_index{};
-        while ((end_index = str.find(delimeter, start_index)) && end_index != std::string::npos)
+        while ((end_index = str.find(delimeter, start_index)) != std::string::npos)
         {
             auto distance = end_index - start_index;
             auto column = str.substr(start_index, distance);
@@ -163,7 +163,7 @@ public:
         while (std::getline(file, line))
         {
             if (line.empty())
-                break;
+                continue;
 
             const bool isResult = line.at(0) == 'R';
             const bool isAction = !isResult;
@@ -211,7 +211,7 @@ public:
 TEST_P(OrderbookTestsFixture, OrderbookTestSuite)
 {
     // Arrange
-    const auto file = OrderbookTestsFixture::TestFolderPath / GetParam();
+    const auto file = std::filesystem::path(TEST_DATA_DIR) / GetParam();
 
     InputHandler handler;
     const auto [actions, result] = handler.GetInformations(file);

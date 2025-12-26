@@ -3,6 +3,7 @@
 #include <numeric>
 #include <chrono>
 #include <ctime>
+#include "TimeUtils.h"
 
 void Orderbook::PruneGoodForDayOrders()
 {    
@@ -13,8 +14,10 @@ void Orderbook::PruneGoodForDayOrders()
 	{
 		const auto now = system_clock::now();
 		const auto now_c = system_clock::to_time_t(now);
-		std::tm now_parts;
-		localtime_s(&now_parts, &now_c);
+		//std::tm now_parts;
+
+		//localtime_s(&now_parts, &now_c);
+		std::tm now_parts = ob::time::localtime_safe(now_c);
 
 		if (now_parts.tm_hour >= end.count())
 			now_parts.tm_mday += 1;
@@ -39,9 +42,9 @@ void Orderbook::PruneGoodForDayOrders()
 		{
 			std::scoped_lock ordersLock{ ordersMutex_ };
 
-			for (const auto& [_, entry] : orders_)
+			for (const auto& [id, entry] : orders_)
 			{
-				const auto& [order, _] = entry;
+				const auto& [order, iterator] = entry;
 
 				if (order->GetOrderType() != OrderType::GoodForDay)
 					continue;
