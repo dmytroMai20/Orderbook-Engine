@@ -21,10 +21,12 @@ find_package(fmt REQUIRED)
 # ---- Core library ----
 add_library(orderbook_core
     src/core/Orderbook.cpp
+    src/concurrency/SPSCRingBuffer.cpp
 )
 
 target_include_directories(orderbook_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/concurrency
 )
 
 target_link_libraries(orderbook_core PUBLIC
