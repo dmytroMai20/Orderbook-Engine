@@ -21,7 +21,8 @@ find_package(fmt REQUIRED)
 # ---- Core library ----
 add_library(orderbook_core
     src/core/Orderbook.cpp
-    src/concurrency/SPSCRingBuffer.cpp
+    src/concurrency/MatchingEngine.cpp
+    src/concurrency/Producer.cpp
 )
 
 target_include_directories(orderbook_core PUBLIC
