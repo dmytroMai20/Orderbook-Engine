@@ -11,11 +11,13 @@
 #include "Order.h"
 #include "OrderModify.h"
 #include "OrderRingBuffer.h"
+#include "Backpressure.h"
 
 class Producer {
 public:
     Producer(
         OrderRingBuffer& queue,
+        Backpressure& backpressure,
         std::atomic<bool>& running,
         uint32_t producer_id
     );
@@ -24,18 +26,14 @@ public:
 
 private:
     void produce_event();
+    uint32_t next_u32() noexcept;
 
 private:
     OrderRingBuffer& queue_;
+    Backpressure& backpressure_;
     std::atomic<bool>& running_;
     uint32_t producer_id_;
 
-    // RNG
-    std::mt19937 rng_;
-
-    // Distributions
-    std::uniform_int_distribution<int> event_dist_;   // Add / Cancel / Modify
-    std::uniform_int_distribution<Price> price_dist_;
-    std::uniform_int_distribution<Quantity> qty_dist_;
-    std::uniform_int_distribution<int> side_dist_;
+    uint32_t rng_state_;
+    uint64_t order_seq_ = 0;
 };

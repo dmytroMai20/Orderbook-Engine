@@ -34,29 +34,33 @@ void Orderbook::CancelOrderInternal(OrderId orderId)
 
 void Orderbook::OnOrderCancelled(OrderPointer order)
 {
-    UpdateLevelData(order->GetPrice(),
+    UpdateLevelData(order->GetSide(),
+                    order->GetPrice(),
                     order->GetRemainingQuantity(),
                     LevelData::Action::Remove);
 }
 
 void Orderbook::OnOrderAdded(OrderPointer order)
 {
-    UpdateLevelData(order->GetPrice(),
+    UpdateLevelData(order->GetSide(),
+                    order->GetPrice(),
                     order->GetInitialQuantity(),
                     LevelData::Action::Add);
 }
 
-void Orderbook::OnOrderMatched(Price price, Quantity quantity, bool isFullyFilled)
+void Orderbook::OnOrderMatched(Side side, Price price, Quantity quantity, bool isFullyFilled)
 {
-    UpdateLevelData(price,
+    UpdateLevelData(side,
+                    price,
                     quantity,
                     isFullyFilled ? LevelData::Action::Remove
                                   : LevelData::Action::Match);
 }
 
-void Orderbook::UpdateLevelData(Price price, Quantity quantity, LevelData::Action action)
+void Orderbook::UpdateLevelData(Side side, Price price, Quantity quantity, LevelData::Action action)
 {
-    auto& data = data_[price];
+    auto& bookData = (side == Side::Buy) ? bidData_ : askData_;
+    auto& data = bookData[price];
 
     data.count_ += (action == LevelData::Action::Add)
                      ? 1
@@ -68,7 +72,7 @@ void Orderbook::UpdateLevelData(Price price, Quantity quantity, LevelData::Actio
         data.quantity_ += quantity;
 
     if (data.count_ == 0)
-        data_.erase(price);
+        bookData.erase(price);
 }
 
 bool Orderbook::CanFullyFill(Side side, Price price, Quantity quantity) const
@@ -76,23 +80,38 @@ bool Orderbook::CanFullyFill(Side side, Price price, Quantity quantity) const
     if (!CanMatch(side, price))
         return false;
 
-    std::optional<Price> threshold;
-
     if (side == Side::Buy)
-        threshold = asks_.begin()->first;
-    else
-        threshold = bids_.begin()->first;
-
-    for (const auto& [levelPrice, levelData] : data_)
     {
-        if ((side == Side::Buy && levelPrice > price) ||
-            (side == Side::Sell && levelPrice < price))
+        for (const auto& [askPrice, orders] : asks_)
+        {
+            if (askPrice > price)
+                break;
+
+            const auto it = askData_.find(askPrice);
+            if (it == askData_.end())
+                continue;
+
+            if (quantity <= it->second.quantity_)
+                return true;
+
+            quantity -= it->second.quantity_;
+        }
+        return false;
+    }
+
+    for (const auto& [bidPrice, orders] : bids_)
+    {
+        if (bidPrice < price)
+            break;
+
+        const auto it = bidData_.find(bidPrice);
+        if (it == bidData_.end())
             continue;
 
-        if (quantity <= levelData.quantity_)
+        if (quantity <= it->second.quantity_)
             return true;
 
-        quantity -= levelData.quantity_;
+        quantity -= it->second.quantity_;
     }
 
     return false;
@@ -150,20 +169,20 @@ Trades Orderbook::MatchOrders()
                 { ask->GetOrderId(), ask->GetPrice(), quantity }
             });
 
-            OnOrderMatched(bid->GetPrice(), quantity, bid->IsFilled());
-            OnOrderMatched(ask->GetPrice(), quantity, ask->IsFilled());
+            OnOrderMatched(bid->GetSide(), bid->GetPrice(), quantity, bid->IsFilled());
+            OnOrderMatched(ask->GetSide(), ask->GetPrice(), quantity, ask->IsFilled());
         }
 
         if (bids.empty())
         {
             bids_.erase(bidPrice);
-            data_.erase(bidPrice);
+            bidData_.erase(bidPrice);
         }
 
         if (asks.empty())
         {
             asks_.erase(askPrice);
-            data_.erase(askPrice);
+            askData_.erase(askPrice);
         }
     }
 

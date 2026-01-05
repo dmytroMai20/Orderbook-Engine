@@ -19,7 +19,8 @@ void MatchingEngine::start() {
 
 void MatchingEngine::stop() {
     running_.store(false, std::memory_order_release);
-    engineThread_.join();
+    if (engineThread_.joinable())
+        engineThread_.join();
 }
 
 void MatchingEngine::print() const{
@@ -64,6 +65,7 @@ void MatchingEngine::run() {
 
         while (processed < burstSize_ && queue->pop(event)) {
             processed++;
+            backpressure_.decrement();
 
             switch (event.type) {
                 case EngineEventType::Add:
@@ -85,7 +87,9 @@ void MatchingEngine::run() {
                     break;
 
                 case EngineEventType::Shutdown:
-                    running_.store(false, std::memory_order_release);
+                    shutdownsReceived_++;
+                    if (shutdownsReceived_ >= queues_.size())
+                        running_.store(false, std::memory_order_release);
                     break;
             }
             eventsProcessed_++;

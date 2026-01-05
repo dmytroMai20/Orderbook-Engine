@@ -28,8 +28,9 @@ private:
     std::vector<OrderRingBuffer*> queues_;
     Backpressure& backpressure_;
     uint32_t burstSize_;
-    uint32_t eventsProcessed_;
+    uint32_t eventsProcessed_ = 0;
+    uint32_t shutdownsReceived_ = 0;
 
-    std::atomic<bool> running_{false};
-    std::thread engineThread_;
+    std::atomic<bool> running_ = false;
+    std::thread engineThread_ = std::thread();
 };

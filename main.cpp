@@ -12,9 +12,12 @@
 
 int main()
 {
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+
     std::atomic<bool> running{true};
 
-    constexpr std::size_t kNumProducers = 1;
+    constexpr std::size_t kNumProducers = 8;
 
     // One SPSC queue per producer
     std::vector<OrderRingBuffer> queues_storage(kNumProducers);
@@ -43,12 +46,12 @@ int main()
     producerThreads.reserve(kNumProducers);
 
     for (std::size_t i = 0; i < kNumProducers; ++i) {
-        producers.emplace_back(*queues[i], running, static_cast<uint32_t>(i));
+        producers.emplace_back(*queues[i], backpressure, running, static_cast<uint32_t>(i));
         producerThreads.emplace_back(&Producer::run, &producers.back());
     }
 
     std::cout << "Running for 1 seconds...\n";
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 
     // Stop producers
     running.store(false, std::memory_order_release);
@@ -58,6 +61,7 @@ int main()
         while (!q->push(EngineEvent::MakeShutdown())) {
             std::this_thread::yield();
         }
+        backpressure.increment();
     }
 
     for (auto& t : producerThreads) {

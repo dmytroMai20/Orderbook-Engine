@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 
 template<typename T, std::size_t Size>
 class SPSCQueue {
@@ -27,6 +28,24 @@ public:
         }
 
         buffer_[current_tail] = item;
+
+        tail_.store(next_tail, std::memory_order_release);
+        return true;
+    }
+
+    inline bool push(T&& item) noexcept {
+        const std::size_t current_tail =
+            tail_.load(std::memory_order_relaxed);
+
+        const std::size_t next_tail =
+            (current_tail + 1) & (Size - 1);
+
+        if (next_tail ==
+            head_.load(std::memory_order_acquire)) {
+            return false; // full
+        }
+
+        buffer_[current_tail] = std::move(item);
 
         tail_.store(next_tail, std::memory_order_release);
         return true;

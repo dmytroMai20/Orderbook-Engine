@@ -1,8 +1,7 @@
 #pragma once
 
 #include <list>
-#include <exception>
-#include <fmt/core.h>
+#include <cassert>
 
 #include "OrderType.h"
 #include "Side.h"
@@ -37,14 +36,17 @@ public:
     void Fill(Quantity quantity)
     {
         if (quantity > GetRemainingQuantity())
-            throw std::logic_error(fmt::format("Order ({}) cannot be filled for more than its remaining quantity.", GetOrderId()));
+        {
+            assert(false && "Order cannot be filled for more than its remaining quantity");
+            quantity = GetRemainingQuantity();
+        }
 
         remainingQuantity_ -= quantity;
     }
     void ToGoodTillCancel(Price price) 
     { 
         if (GetOrderType() != OrderType::Market)
-            throw std::logic_error(fmt::format("Order ({}) cannot have its price adjusted, only market orders can.", GetOrderId()));
+            throw std::logic_error("Order cannot have its price adjusted, only market orders can.");
 
         price_ = price;
         orderType_ = OrderType::GoodTillCancel;

@@ -36,6 +36,12 @@ target_link_libraries(orderbook_core PUBLIC
 
 target_compile_features(orderbook_core PUBLIC cxx_std_20)
 
+target_compile_options(orderbook_core PRIVATE
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:-march=native>
+    $<$<CONFIG:Release>:-DNDEBUG>
+)
+
 # ---- Main executable ----
 add_executable(Orderbook
     main.cpp
