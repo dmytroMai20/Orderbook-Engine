@@ -68,10 +68,10 @@ Message size: 40 bytes
 Messages per cache line: 1
 Page size: 16384 bytes
 
-SPSC push+pop round-trip latency (ns): p50=41 p95=42 p99=42 p99.9=84
-Orderbook AddOrder latency (ns): p50=416 p95=2708 p99=3333 p99.9=10708
-Orderbook CancelOrder latency (ns): p50=83 p95=125 p99=167 p99.9=875
-Orderbook ModifyOrder latency (ns): p50=1583 p95=5292 p99=8083 p99.9=20584
+SPSC push+pop round-trip latency (ns): p50=42 p95=42 p99=42 p99.9=125
+Orderbook AddOrder latency (ns): p50=83 p95=125 p99=167 p99.9=1625
+Orderbook CancelOrder latency (ns): p50=125 p95=125 p99=209 p99.9=750
+Orderbook ModifyOrder latency (ns): p50=250 p95=292 p99=375 p99.9=1834
 ```
 
 ### Implementation Details
