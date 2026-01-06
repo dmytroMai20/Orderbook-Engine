@@ -12,6 +12,7 @@ Built using **CMake**, **fmt**, and **GoogleTest**.
  - Thread-safety [TODO]
  - Bug fixes
  - Restructured the project, separated into core library and tests
+ - Removed all comments from source/header files and performed minor whitespace cleanup
 
 ## Requirements
 

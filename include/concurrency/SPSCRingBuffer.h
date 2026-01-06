@@ -45,7 +45,7 @@ public:
 
         if (next_tail ==
             head_.load(std::memory_order_acquire)) {
-            return false; // full
+            return false;
         }
 
         buffer_[current_tail] = item;
@@ -63,7 +63,7 @@ public:
 
         if (next_tail ==
             head_.load(std::memory_order_acquire)) {
-            return false; // full
+            return false;
         }
 
         buffer_[current_tail] = std::move(item);
@@ -78,7 +78,7 @@ public:
 
         if (current_head ==
             tail_.load(std::memory_order_acquire)) {
-            return false; // empty
+            return false;
         }
 
         item = std::move(buffer_[current_head]);

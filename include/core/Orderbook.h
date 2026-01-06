@@ -27,7 +27,6 @@ private:
     std::map<Price, OrderPointers, std::less<Price>> asks_;
     std::unordered_map<OrderId, OrderEntry> orders_;
 
-    // 🔥 Operation counters (non-atomic, single-threaded engine)
     std::uint64_t addCount_{0};
     std::uint64_t cancelCount_{0};
     std::uint64_t modifyCount_{0};
@@ -57,7 +56,6 @@ public:
     std::size_t Size() const;
     OrderbookLevelInfos GetOrderInfos() const;
 
-    // 🔍 Optional accessors
     std::uint64_t TotalOps() const {
         return addCount_ + cancelCount_ + modifyCount_ + executeCount_;
     }

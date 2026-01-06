@@ -21,7 +21,6 @@ int main()
 
     constexpr std::size_t kNumProducers = 1;
 
-    // One SPSC queue per producer
     std::vector<OrderRingBuffer> queues_storage(kNumProducers);
     std::vector<OrderRingBuffer*> queues;
 
@@ -52,7 +51,6 @@ int main()
     engine.start();
 
     std::cout << "Starting producers...\n";
-    // Create producers
     std::vector<std::unique_ptr<Producer>> producers;
     std::vector<std::thread> producerThreads;
 
@@ -151,13 +149,11 @@ int main()
         }
     });
 
-    std::cout << "Running for 300 seconds...\n";
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::cout << "Running for 20 seconds...\n";
+    std::this_thread::sleep_for(std::chrono::seconds(20));
 
-    // Stop producers
     running.store(false, std::memory_order_release);
 
-    // Send shutdown event to each queue
     for (auto* q : queues) {
         uint32_t spins = 0;
         while (!q->push(EngineEvent::MakeShutdown())) {

@@ -88,7 +88,7 @@ void Producer::produce_event() {
     const int event_type = static_cast<int>(next_u32() % 3u);
     const Side side = ((next_u32() & 1u) == 0u) ? Side::Buy : Side::Sell;
     switch (event_type) {
-    case 0: { // Add
+    case 0: {
         const Price price = static_cast<Price>(90 + (next_u32() % 21u));
         const Quantity qty = static_cast<Quantity>(1 + (next_u32() % 100u));
         const OrderId id = (static_cast<OrderId>(producer_id_) << 32) | static_cast<OrderId>(order_seq_++);
@@ -134,7 +134,7 @@ void Producer::produce_event() {
         break;
     }
 
-    case 1: { // Cancel
+    case 1: {
         OrderId id{ next_u32() };
         if (id_ring_count_ > 0)
         {
@@ -155,7 +155,7 @@ void Producer::produce_event() {
         break;
     }
 
-    case 2: { // Modify
+    case 2: {
         OrderId id{ next_u32() };
         if (id_ring_count_ > 0)
         {

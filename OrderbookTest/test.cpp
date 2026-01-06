@@ -210,7 +210,6 @@ public:
 
 TEST_P(OrderbookTestsFixture, OrderbookTestSuite)
 {
-    // Arrange
     const auto file = std::filesystem::path(TEST_DATA_DIR) / GetParam();
 
     InputHandler handler;
@@ -237,7 +236,6 @@ TEST_P(OrderbookTestsFixture, OrderbookTestSuite)
         };
     };
 
-    // Act
     Orderbook orderbook;
     for (const auto& action : actions)
     {
@@ -263,7 +261,6 @@ TEST_P(OrderbookTestsFixture, OrderbookTestSuite)
         }
     }
 
-    // Assert
     const auto& orderbookInfos = orderbook.GetOrderInfos();
     ASSERT_EQ(orderbook.Size(), result.allCount_);
     ASSERT_EQ(orderbookInfos.GetBids().size(), result.bidCount_);
