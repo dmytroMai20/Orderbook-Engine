@@ -4,10 +4,12 @@
 
 #include "EngineEvent.h"
 #include "OrderRingBuffer.h"
+#include "Orderbook.h"
 
 #include <chrono>
 #include <cstdint>
 #include <iostream>
+#include <memory>
 #include <vector>
 
 namespace {
@@ -57,6 +59,110 @@ benchmarks::LatencyPercentilesNs RunSingleThreadQueueRoundTripLatency(std::size_
     return benchmarks::ComputeLatencyPercentilesNs(std::move(samples));
 }
 
+benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookAddLatency(std::size_t iterations) {
+    Orderbook ob;
+
+    std::vector<Order> storage;
+    storage.reserve(iterations);
+    for (std::size_t i = 0; i < iterations; ++i) {
+        storage.emplace_back(OrderType::GoodTillCancel,
+                             static_cast<OrderId>(i + 1),
+                             Side::Buy,
+                             static_cast<Price>(100),
+                             static_cast<Quantity>(1));
+    }
+
+    std::vector<OrderPointer> orders;
+    orders.reserve(iterations);
+    for (std::size_t i = 0; i < iterations; ++i) {
+        orders.emplace_back(OrderPointer(&storage[i], [](Order*) {}));
+    }
+
+    std::vector<std::uint64_t> samples;
+    samples.reserve(iterations);
+
+    for (std::size_t i = 0; i < 1000 && i < iterations; ++i) {
+        (void)ob.AddOrder(orders[i]);
+    }
+
+    for (std::size_t i = 0; i < iterations; ++i) {
+        const auto t0 = std::chrono::steady_clock::now();
+        (void)ob.AddOrder(orders[i]);
+        const auto t1 = std::chrono::steady_clock::now();
+
+        const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        samples.push_back(static_cast<std::uint64_t>(ns));
+    }
+
+    return benchmarks::ComputeLatencyPercentilesNs(std::move(samples));
+}
+
+benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookCancelLatency(std::size_t iterations) {
+    Orderbook ob;
+
+    std::vector<Order> storage;
+    storage.reserve(iterations);
+    for (std::size_t i = 0; i < iterations; ++i) {
+        storage.emplace_back(OrderType::GoodTillCancel,
+                             static_cast<OrderId>(i + 1),
+                             Side::Buy,
+                             static_cast<Price>(100),
+                             static_cast<Quantity>(1));
+    }
+
+    std::vector<OrderPointer> orders;
+    orders.reserve(iterations);
+    for (std::size_t i = 0; i < iterations; ++i) {
+        orders.emplace_back(OrderPointer(&storage[i], [](Order*) {}));
+    }
+
+    for (std::size_t i = 0; i < iterations; ++i) {
+        (void)ob.AddOrder(orders[i]);
+    }
+
+    std::vector<std::uint64_t> samples;
+    samples.reserve(iterations);
+
+    for (std::size_t i = 0; i < iterations; ++i) {
+        const OrderId id = static_cast<OrderId>(i + 1);
+        const auto t0 = std::chrono::steady_clock::now();
+        ob.CancelOrder(id);
+        const auto t1 = std::chrono::steady_clock::now();
+
+        const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        samples.push_back(static_cast<std::uint64_t>(ns));
+    }
+
+    return benchmarks::ComputeLatencyPercentilesNs(std::move(samples));
+}
+
+benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookModifyLatency(std::size_t iterations) {
+    Orderbook ob;
+
+    for (std::size_t i = 0; i < iterations; ++i) {
+        const OrderId id = static_cast<OrderId>(i + 1);
+        auto o = std::make_shared<Order>(OrderType::GoodTillCancel, id, Side::Buy, static_cast<Price>(100), static_cast<Quantity>(1));
+        (void)ob.AddOrder(std::move(o));
+    }
+
+    std::vector<std::uint64_t> samples;
+    samples.reserve(iterations);
+
+    for (std::size_t i = 0; i < iterations; ++i) {
+        const OrderId id = static_cast<OrderId>(i + 1);
+        OrderModify mod{id, Side::Buy, static_cast<Price>(101), static_cast<Quantity>(1)};
+
+        const auto t0 = std::chrono::steady_clock::now();
+        (void)ob.ModifyOrder(mod);
+        const auto t1 = std::chrono::steady_clock::now();
+
+        const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        samples.push_back(static_cast<std::uint64_t>(ns));
+    }
+
+    return benchmarks::ComputeLatencyPercentilesNs(std::move(samples));
+}
+
 }
 
 int main(int argc, char** argv) {
@@ -77,6 +183,15 @@ int main(int argc, char** argv) {
 
     const auto pct = RunSingleThreadQueueRoundTripLatency(iterations);
     benchmarks::PrintLatencyStats("SPSC push+pop round-trip", pct);
+
+    const auto addPct = RunSingleThreadOrderbookAddLatency(iterations);
+    benchmarks::PrintLatencyStats("Orderbook AddOrder", addPct);
+
+    const auto cancelPct = RunSingleThreadOrderbookCancelLatency(iterations);
+    benchmarks::PrintLatencyStats("Orderbook CancelOrder", cancelPct);
+
+    const auto modifyPct = RunSingleThreadOrderbookModifyLatency(iterations);
+    benchmarks::PrintLatencyStats("Orderbook ModifyOrder", modifyPct);
 
     return 0;
 }
