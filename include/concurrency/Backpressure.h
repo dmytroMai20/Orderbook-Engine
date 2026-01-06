@@ -13,9 +13,17 @@ struct Backpressure {
 
     void wait_if_needed() {
         waitCalls.fetch_add(1, std::memory_order_relaxed);
+        uint32_t spins = 0;
         while (count.load(std::memory_order_acquire) >= limit) {
             waitSpins.fetch_add(1, std::memory_order_relaxed);
-            std::this_thread::yield();
+
+            if (spins < 128) {
+                ++spins;
+                asm volatile("" ::: "memory");
+            } else {
+                spins = 0;
+                std::this_thread::yield();
+            }
         }
     }
 

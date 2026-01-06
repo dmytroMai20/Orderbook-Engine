@@ -99,18 +99,27 @@ void Producer::produce_event() {
             ++id_ring_count_;
 
         Order* raw = nullptr;
+        bool fromPool = true;
         uint32_t allocSpins = 0;
+        uint32_t allocFails = 0;
         while ((raw = pool_->acquire()) == nullptr) {
             if (!running_.load(std::memory_order_relaxed))
                 return;
             poolWaitSpins_.fetch_add(1, std::memory_order_relaxed);
             backoff(allocSpins);
+
+            if (++allocFails >= 1024) {
+                fromPool = false;
+                raw = new Order(OrderType::GoodTillCancel, OrderId{0}, Side::Buy, Price{0}, Quantity{0});
+                break;
+            }
         }
+
         raw->Reset(OrderType::GoodTillCancel, id, side, price, qty);
 
-        auto order = OrderPointer(raw, [pool = pool_](Order* p) {
-            pool->release(p);
-        });
+        auto order = fromPool
+            ? OrderPointer(raw, [pool = pool_](Order* p) { pool->release(p); })
+            : OrderPointer(raw, [](Order* p) { delete p; });
 
         EngineEvent ev = EngineEvent::MakeAdd(std::move(order));
         backpressure_.wait_if_needed();

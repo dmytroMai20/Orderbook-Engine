@@ -19,7 +19,7 @@ int main()
 
     std::atomic<bool> running{true};
 
-    constexpr std::size_t kNumProducers = 8;
+    constexpr std::size_t kNumProducers = 1;
 
     // One SPSC queue per producer
     std::vector<OrderRingBuffer> queues_storage(kNumProducers);
@@ -38,7 +38,8 @@ int main()
 
     constexpr std::size_t kRingSize = 16384;
     constexpr std::size_t kRingCapacity = kRingSize - 1;
-    Backpressure backpressure((kNumProducers * kRingCapacity * 3) / 4);
+    constexpr std::size_t kTotalCapacity = kNumProducers * kRingCapacity;
+    Backpressure backpressure((kTotalCapacity * 9) / 10);
 
     MatchingEngine engine(
         queues,
@@ -139,7 +140,7 @@ int main()
                 << "[mon] ev/s=" << (seconds > 0.0 ? (static_cast<double>(dEvents) / seconds) : 0.0)
                 << " ops/s=" << (seconds > 0.0 ? (static_cast<double>(dOps) / seconds) : 0.0)
                 << " prod/s=" << (seconds > 0.0 ? (static_cast<double>(totalProd) / seconds) : 0.0)
-                << " qDepth=" << qDepth
+                << " qDepth=" << qDepth << "/" << kTotalCapacity
                 << " orders=" << engine.OrderCount()
                 << " idle=" << dIdle
                 << " bpWaitCalls=" << dBpWaitCalls
@@ -150,8 +151,8 @@ int main()
         }
     });
 
-    std::cout << "Running for 20 seconds...\n";
-    std::this_thread::sleep_for(std::chrono::seconds(20));
+    std::cout << "Running for 300 seconds...\n";
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 
     // Stop producers
     running.store(false, std::memory_order_release);
