@@ -28,6 +28,7 @@ add_library(orderbook_core
 target_include_directories(orderbook_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include/core
     ${CMAKE_CURRENT_SOURCE_DIR}/include/concurrency
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_link_libraries(orderbook_core PUBLIC
@@ -53,6 +54,19 @@ add_executable(Orderbook
 )
 
 target_link_libraries(Orderbook PRIVATE
+    orderbook_core
+)
+
+# ---- Benchmarks ----
+add_executable(OrderbookBenchmarks
+    src/Benchmarks/SingleThreadLatency.cpp
+    src/Benchmarks/Priority.cpp
+    src/Benchmarks/SystemInfo.cpp
+    src/Benchmarks/Percentiles.cpp
+    src/Benchmarks/BenchPrinter.cpp
+)
+
+target_link_libraries(OrderbookBenchmarks PRIVATE
     orderbook_core
 )
 
