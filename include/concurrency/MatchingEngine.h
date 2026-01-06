@@ -23,6 +23,8 @@ public:
 
     uint32_t EventsProcessed() const { return eventsProcessed_; }
     std::uint64_t TotalOps() const { return orderbook_.TotalOps(); }
+    std::size_t OrderCount() const { return orderbook_.Size(); }
+    std::uint64_t IdleLoops() const { return idleLoops_.load(std::memory_order_relaxed); }
 
 private:
     void run();
@@ -33,6 +35,8 @@ private:
     uint32_t burstSize_;
     uint32_t eventsProcessed_ = 0;
     uint32_t shutdownsReceived_ = 0;
+
+    alignas(64) std::atomic<std::uint64_t> idleLoops_{0};
 
     std::atomic<bool> running_ = false;
     std::thread engineThread_ = std::thread();

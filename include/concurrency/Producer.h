@@ -26,6 +26,10 @@ public:
 
     void run();
 
+    std::uint64_t ProducedEvents() const { return producedEvents_.load(std::memory_order_relaxed); }
+    std::uint64_t PoolWaitSpins() const { return poolWaitSpins_.load(std::memory_order_relaxed); }
+    std::uint64_t EnqueueRetries() const { return enqueueRetries_.load(std::memory_order_relaxed); }
+
 private:
     void produce_event();
     uint32_t next_u32() noexcept;
@@ -60,4 +64,8 @@ private:
     std::array<OrderId, IdRingSize> id_ring_{};
     std::size_t id_ring_pos_ = 0;
     std::size_t id_ring_count_ = 0;
+
+    alignas(64) std::atomic<std::uint64_t> producedEvents_{0};
+    alignas(64) std::atomic<std::uint64_t> poolWaitSpins_{0};
+    alignas(64) std::atomic<std::uint64_t> enqueueRetries_{0};
 };

@@ -114,6 +114,7 @@ void MatchingEngine::run() {
         index = (index + 1) % queues_.size();
 
         if (processed == 0) {
+            idleLoops_.fetch_add(1, std::memory_order_relaxed);
             backoff(idleSpins);
         } else {
             idleSpins = 0;

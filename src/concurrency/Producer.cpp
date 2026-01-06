@@ -103,6 +103,7 @@ void Producer::produce_event() {
         while ((raw = pool_->acquire()) == nullptr) {
             if (!running_.load(std::memory_order_relaxed))
                 return;
+            poolWaitSpins_.fetch_add(1, std::memory_order_relaxed);
             backoff(allocSpins);
         }
         raw->Reset(OrderType::GoodTillCancel, id, side, price, qty);
@@ -115,9 +116,12 @@ void Producer::produce_event() {
         backpressure_.wait_if_needed();
         uint32_t spins = 0;
         while (!queue_.push(ev)) {
+            enqueueRetries_.fetch_add(1, std::memory_order_relaxed);
+            backpressure_.wait_if_needed();
             backoff(spins);
         }
         backpressure_.increment();
+        producedEvents_.fetch_add(1, std::memory_order_relaxed);
         break;
     }
 
@@ -133,9 +137,12 @@ void Producer::produce_event() {
         backpressure_.wait_if_needed();
         uint32_t spins = 0;
         while (!queue_.push(ev)) {
+            enqueueRetries_.fetch_add(1, std::memory_order_relaxed);
+            backpressure_.wait_if_needed();
             backoff(spins);
         }
         backpressure_.increment();
+        producedEvents_.fetch_add(1, std::memory_order_relaxed);
         break;
     }
 
@@ -158,9 +165,12 @@ void Producer::produce_event() {
         backpressure_.wait_if_needed();
         uint32_t spins = 0;
         while (!queue_.push(ev)) {
+            enqueueRetries_.fetch_add(1, std::memory_order_relaxed);
+            backpressure_.wait_if_needed();
             backoff(spins);
         }
         backpressure_.increment();
+        producedEvents_.fetch_add(1, std::memory_order_relaxed);
         break;
     }
 

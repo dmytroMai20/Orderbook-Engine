@@ -3,4 +3,4 @@
 #include "SPSCRingBuffer.h"
 #include "EngineEvent.h"
 
-using OrderRingBuffer = SPSCQueue<EngineEvent, 1024>;
+using OrderRingBuffer = SPSCQueue<EngineEvent, 16384>;
