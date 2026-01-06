@@ -5,6 +5,10 @@
 #include <cstdint>
 #include <utility>
 
+#if defined(__APPLE__) || defined(__unix__)
+#include <sys/mman.h>
+#endif
+
 template<typename T, std::size_t Size>
 class SPSCQueue {
     static_assert((Size & (Size - 1)) == 0,
@@ -14,6 +18,23 @@ public:
     SPSCQueue() = default;
     SPSCQueue(const SPSCQueue&) = delete;
     SPSCQueue& operator=(const SPSCQueue&) = delete;
+
+    inline void prefault() noexcept {
+        volatile std::uint8_t* p =
+            reinterpret_cast<volatile std::uint8_t*>(buffer_);
+
+        constexpr std::size_t kPage = 4096;
+        const std::size_t bytes = sizeof(buffer_);
+        for (std::size_t i = 0; i < bytes; i += kPage) {
+            p[i] = p[i];
+        }
+        if (bytes > 0)
+            p[bytes - 1] = p[bytes - 1];
+
+#if defined(__APPLE__) || defined(__unix__)
+        (void)mlock(reinterpret_cast<const void*>(buffer_), bytes);
+#endif
+    }
 
     inline bool push(const T& item) noexcept {
         const std::size_t current_tail =
@@ -60,7 +81,8 @@ public:
             return false; // empty
         }
 
-        item = buffer_[current_head];
+        item = std::move(buffer_[current_head]);
+        buffer_[current_head] = T{};
 
         head_.store((current_head + 1) & (Size - 1),
                     std::memory_order_release);

@@ -1,4 +1,56 @@
 #include "Producer.h"
+#include "ThreadPinning.h"
+
+namespace {
+inline void backoff(uint32_t& spins) noexcept {
+    if (spins < 64) {
+        ++spins;
+        asm volatile("" ::: "memory");
+        return;
+    }
+    spins = 0;
+    std::this_thread::yield();
+}
+}
+
+Producer::OrderPool::OrderPool()
+    : storage_(std::make_unique<Storage[]>(PoolSize))
+{
+    for (std::size_t i = 0; i < PoolSize; ++i)
+    {
+        auto* p = reinterpret_cast<Order*>(&storage_[i]);
+        new (p) Order(OrderType::GoodTillCancel, OrderId{0}, Side::Buy, Price{0}, Quantity{0});
+        while (!freelist_.push(p)) {
+        }
+    }
+}
+
+Producer::OrderPool::~OrderPool()
+{
+    for (std::size_t i = 0; i < PoolSize; ++i)
+    {
+        auto* p = reinterpret_cast<Order*>(&storage_[i]);
+        p->~Order();
+    }
+}
+
+Order* Producer::OrderPool::acquire() noexcept
+{
+    Order* p = nullptr;
+    if (freelist_.pop(p))
+        return p;
+    return nullptr;
+}
+
+void Producer::OrderPool::release(Order* p) noexcept
+{
+    if (!p)
+        return;
+    uint32_t spins = 0;
+    while (!freelist_.push(p)) {
+        backoff(spins);
+    }
+}
 
 Producer::Producer(
     OrderRingBuffer& queue,
@@ -11,6 +63,7 @@ Producer::Producer(
     , running_(running)
     , producer_id_(producer_id)
     , rng_state_(producer_id ? producer_id : 1u)
+    , pool_(std::make_shared<OrderPool>())
 {
 }
 
@@ -24,6 +77,8 @@ uint32_t Producer::next_u32() noexcept {
 }
 
 void Producer::run() {
+    PinCurrentThreadToCore(producer_id_ + 1);
+
     while (running_.load(std::memory_order_relaxed)) {
         produce_event();
     }
@@ -38,18 +93,29 @@ void Producer::produce_event() {
         const Quantity qty = static_cast<Quantity>(1 + (next_u32() % 100u));
         const OrderId id = (static_cast<OrderId>(producer_id_) << 32) | static_cast<OrderId>(order_seq_++);
 
-        auto order = std::make_shared<Order>(
-            OrderType::GoodTillCancel,
-            id,
-            side,
-            price,
-            qty
-        );
+        id_ring_[id_ring_pos_] = id;
+        id_ring_pos_ = (id_ring_pos_ + 1) & (IdRingSize - 1);
+        if (id_ring_count_ < IdRingSize)
+            ++id_ring_count_;
+
+        Order* raw = nullptr;
+        uint32_t allocSpins = 0;
+        while ((raw = pool_->acquire()) == nullptr) {
+            if (!running_.load(std::memory_order_relaxed))
+                return;
+            backoff(allocSpins);
+        }
+        raw->Reset(OrderType::GoodTillCancel, id, side, price, qty);
+
+        auto order = OrderPointer(raw, [pool = pool_](Order* p) {
+            pool->release(p);
+        });
 
         EngineEvent ev = EngineEvent::MakeAdd(std::move(order));
         backpressure_.wait_if_needed();
-        while (!queue_.push(std::move(ev))) {
-            std::this_thread::yield();
+        uint32_t spins = 0;
+        while (!queue_.push(ev)) {
+            backoff(spins);
         }
         backpressure_.increment();
         break;
@@ -57,18 +123,32 @@ void Producer::produce_event() {
 
     case 1: { // Cancel
         OrderId id{ next_u32() };
+        if (id_ring_count_ > 0)
+        {
+            const std::size_t offset = static_cast<std::size_t>(next_u32() % id_ring_count_);
+            const std::size_t idx = (id_ring_pos_ - 1 - offset) & (IdRingSize - 1);
+            id = id_ring_[idx];
+        }
         EngineEvent ev = EngineEvent::MakeCancel(id);
         backpressure_.wait_if_needed();
-        while (!queue_.push(std::move(ev))) {
-            std::this_thread::yield();
+        uint32_t spins = 0;
+        while (!queue_.push(ev)) {
+            backoff(spins);
         }
         backpressure_.increment();
         break;
     }
 
     case 2: { // Modify
+        OrderId id{ next_u32() };
+        if (id_ring_count_ > 0)
+        {
+            const std::size_t offset = static_cast<std::size_t>(next_u32() % id_ring_count_);
+            const std::size_t idx = (id_ring_pos_ - 1 - offset) & (IdRingSize - 1);
+            id = id_ring_[idx];
+        }
         OrderModify mod{
-            OrderId{ next_u32() },
+            id,
             ((next_u32() & 1u) == 0u) ? Side::Buy : Side::Sell,
             static_cast<Price>(90 + (next_u32() % 21u)),
             static_cast<Quantity>(1 + (next_u32() % 100u))
@@ -76,8 +156,9 @@ void Producer::produce_event() {
 
         EngineEvent ev = EngineEvent::MakeModify(std::move(mod));
         backpressure_.wait_if_needed();
-        while (!queue_.push(std::move(ev))) {
-            std::this_thread::yield();
+        uint32_t spins = 0;
+        while (!queue_.push(ev)) {
+            backoff(spins);
         }
         backpressure_.increment();
         break;

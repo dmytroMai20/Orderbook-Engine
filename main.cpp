@@ -23,12 +23,18 @@ int main()
     std::vector<OrderRingBuffer> queues_storage(kNumProducers);
     std::vector<OrderRingBuffer*> queues;
 
+    std::cout << "Allocating queues...\n";
+
     queues.reserve(kNumProducers);
     for (auto& q : queues_storage) {
         queues.push_back(&q);
     }
 
-    Backpressure backpressure(size_t{100});
+    for (auto& q : queues_storage) {
+        q.prefault();
+    }
+
+    Backpressure backpressure(kNumProducers * 1024);
 
     MatchingEngine engine(
         queues,
@@ -36,8 +42,11 @@ int main()
         64
     );
 
+    std::cout << "Starting engine...\n";
+
     engine.start();
 
+    std::cout << "Starting producers...\n";
     // Create producers
     std::vector<Producer> producers;
     std::vector<std::thread> producerThreads;
@@ -50,6 +59,8 @@ int main()
         producerThreads.emplace_back(&Producer::run, &producers.back());
     }
 
+    const auto start = std::chrono::steady_clock::now();
+
     std::cout << "Running for 1 seconds...\n";
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
@@ -58,8 +69,15 @@ int main()
 
     // Send shutdown event to each queue
     for (auto* q : queues) {
+        uint32_t spins = 0;
         while (!q->push(EngineEvent::MakeShutdown())) {
-            std::this_thread::yield();
+            if (spins < 64) {
+                ++spins;
+                asm volatile("" ::: "memory");
+            } else {
+                spins = 0;
+                std::this_thread::yield();
+            }
         }
         backpressure.increment();
     }
@@ -69,7 +87,16 @@ int main()
     }
 
     engine.stop();
+    const auto end = std::chrono::steady_clock::now();
+    const std::chrono::duration<double> elapsed = end - start;
     engine.print();
+
+    const double seconds = elapsed.count();
+    const double eventsPerSec = seconds > 0.0 ? (static_cast<double>(engine.EventsProcessed()) / seconds) : 0.0;
+    const double opsPerSec = seconds > 0.0 ? (static_cast<double>(engine.TotalOps()) / seconds) : 0.0;
+    std::cout << "Elapsed seconds: " << seconds << "\n";
+    std::cout << "Events/sec: " << eventsPerSec << "\n";
+    std::cout << "Orderbook ops/sec: " << opsPerSec << "\n";
 
     std::cout << "Shutdown complete.\n";
     return 0;

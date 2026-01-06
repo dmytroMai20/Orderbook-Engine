@@ -1,6 +1,19 @@
 #include "MatchingEngine.h"
+#include "ThreadPinning.h"
 #include <thread>
 #include <iostream>
+
+namespace {
+inline void backoff(uint32_t& spins) noexcept {
+    if (spins < 128) {
+        ++spins;
+        asm volatile("" ::: "memory");
+        return;
+    }
+    spins = 0;
+    std::this_thread::yield();
+}
+}
 
 
 MatchingEngine::MatchingEngine(
@@ -56,8 +69,11 @@ void MatchingEngine::print() const{
 }
 
 void MatchingEngine::run() {
+    PinCurrentThreadToCore(0);
+
     size_t index = 0;
     EngineEvent event;
+    uint32_t idleSpins = 0;
 
     while (running_.load(std::memory_order_acquire)) {
         auto* queue = queues_[index];
@@ -98,7 +114,9 @@ void MatchingEngine::run() {
         index = (index + 1) % queues_.size();
 
         if (processed == 0) {
-            std::this_thread::yield();
+            backoff(idleSpins);
+        } else {
+            idleSpins = 0;
         }
     }
 }

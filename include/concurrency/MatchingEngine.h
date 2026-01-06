@@ -21,6 +21,9 @@ public:
     void stop();
     void print() const;
 
+    uint32_t EventsProcessed() const { return eventsProcessed_; }
+    std::uint64_t TotalOps() const { return orderbook_.TotalOps(); }
+
 private:
     void run();
 

@@ -6,3 +6,4 @@
  - refactor Scheduler and Backpressure
  - change file name from SPSCRingBuffer to queue
  - Change ringbuffer template to make it generic for any size
+ - Core pinning
