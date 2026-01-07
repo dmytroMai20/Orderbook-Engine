@@ -8,8 +8,9 @@ Built using **CMake**, **fmt**, and **GoogleTest**.
 ---
 ## Changes
  - Ported on CMake and changed dependecies to work on Apple/Linux machines
- - Improved concurrency model [TODO]
- - Thread-safety [TODO]
+ - **Improved concurrency model:** N-producer, 1-consumer via N SPSC ring buffers (one per producer)
+ - **Thread safety:** Lock-free SPSC queues and atomic backpressure; matching engine runs on a dedicated pinned thread
+ - Added comprehensive single-thread latency benchmarks for queue and orderbook operations
  - Bug fixes
  - Restructured the project, separated into core library and tests
 
@@ -29,16 +30,22 @@ Built using **CMake**, **fmt**, and **GoogleTest**.
 
 A dedicated `OrderbookBenchmarks` executable provides single-thread latency measurements with percentile reporting (p50, p95, p99, p99.9) and system/ring-buffer configuration details.
 
+### What is measured
+
+- **SPSC queue round-trip latency:** `push` followed by `pop` on the lock-free `OrderRingBuffer` (size 16384)
+- **Orderbook operation latency (single-thread):**
+  - `Orderbook::AddOrder`
+  - `Orderbook::CancelOrder`
+  - `Orderbook::ModifyOrder`
+
+All benchmarks report p50, p95, p99, and p99.9 percentiles in nanoseconds.
+
 ### Features
 
 - **Best-effort priority boosting** (process and thread) on macOS
 - **System info printing** (CPU cores, available memory, page size)
 - **Ring-buffer stats** (size, message size, messages per cache line)
-- **Percentile latency reporting** for:
-  - SPSC queue push+pop round-trip
-  - `Orderbook::AddOrder`
-  - `Orderbook::CancelOrder`
-  - `Orderbook::ModifyOrder`
+- **Preallocation to avoid allocation noise** in orderbook benchmarks
 
 ### Build and Run
 
@@ -81,8 +88,20 @@ Orderbook ModifyOrder latency (ns): p50=250 p95=292 p99=375 p99.9=1834
 - **Percentiles**: Simple sorting and nearest-rank method
 - **Orderbook benchmarks**: Reuse preallocated `Order` objects to avoid allocation noise
 - **Ring buffer**: Uses `OrderRingBuffer = SPSCQueue<EngineEvent, 16384>`
+- **Concurrency model**: N producers → N SPSC ring buffers → 1 matching engine thread (round-robin drain)
 
 ---
+
+## Concurrency Model
+
+The engine uses an **N-producer, 1-consumer** design optimized for low-latency and cache-friendly operation:
+
+- **Producers:** Each producer thread writes to its own lock-free SPSC ring buffer (`OrderRingBuffer`), avoiding contention.
+- **Consumer:** The matching engine runs on a dedicated pinned thread, round-robin draining from all producer queues in configurable bursts.
+- **Backpressure:** Atomic counter limits total in-flight events; producers spin/yield when the limit is reached.
+- **Thread pinning:** On macOS, thread affinity is used to keep producer and engine threads on distinct cores.
+
+This design eliminates mutexes and minimizes cache line sharing, enabling high-throughput order processing with deterministic latency.
 
 ## Build
 

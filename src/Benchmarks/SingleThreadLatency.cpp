@@ -139,10 +139,24 @@ benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookCancelLatency(std::size
 benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookModifyLatency(std::size_t iterations) {
     Orderbook ob;
 
+    std::vector<Order> storage;
+    storage.reserve(iterations);
     for (std::size_t i = 0; i < iterations; ++i) {
-        const OrderId id = static_cast<OrderId>(i + 1);
-        auto o = std::make_shared<Order>(OrderType::GoodTillCancel, id, Side::Buy, static_cast<Price>(100), static_cast<Quantity>(1));
-        (void)ob.AddOrder(std::move(o));
+        storage.emplace_back(OrderType::GoodTillCancel,
+                             static_cast<OrderId>(i + 1),
+                             Side::Buy,
+                             static_cast<Price>(100),
+                             static_cast<Quantity>(1));
+    }
+
+    std::vector<OrderPointer> orders;
+    orders.reserve(iterations);
+    for (std::size_t i = 0; i < iterations; ++i) {
+        orders.emplace_back(OrderPointer(&storage[i], [](Order*) {}));
+    }
+
+    for (std::size_t i = 0; i < iterations; ++i) {
+        (void)ob.AddOrder(orders[i]);
     }
 
     std::vector<std::uint64_t> samples;
