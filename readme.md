@@ -5,6 +5,9 @@ Based on [Tzadiko's order book](https://github.com/Tzadiko/Orderbook)
 A C++20 limit order book engine with clean separation between core logic, application code, and tests.  
 Built using **CMake**, **fmt**, and **GoogleTest**.
 
+> [!IMPORTANT] 
+> Current implementation of benchmarks is only ported to macOS.
+
 ---
 ## Changes
  - Ported on CMake and changed dependecies to work on Apple/Linux machines
@@ -61,7 +64,7 @@ cmake --build build -j
 ./build/OrderbookBenchmarks 200000
 ```
 
-#### Example Output
+#### Example Output on M2 Mac
 
 ```
 Process priority raised: false
@@ -102,14 +105,3 @@ The engine uses an **N-producer, 1-consumer** design optimized for low-latency a
 - **Thread pinning:** On macOS, thread affinity is used to keep producer and engine threads on distinct cores.
 
 This design eliminates mutexes and minimizes cache line sharing, enabling high-throughput order processing with deterministic latency.
-
-## Build
-
-Out-of-source build is required.
-
-```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd Orderbook
-
-cmake -S . -B build
-cmake --build build
