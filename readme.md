@@ -5,8 +5,10 @@ Based on [Tzadiko's order book](https://github.com/Tzadiko/Orderbook)
 A C++20 limit order book engine with clean separation between core logic, application code, and tests.  
 Built using **CMake**, **fmt**, and **GoogleTest**.
 
-> [!IMPORTANT] 
-> Current implementation of benchmarks is only ported to macOS.
+> [!IMPORTANT]
+> Benchmarks are currently supported only on macOS and tested with Apple Clang. Porting to Linux (GCC/Clang) is pending.
+ 
+ 
 
 ---
 ## Changes
@@ -21,8 +23,8 @@ Built using **CMake**, **fmt**, and **GoogleTest**.
 
 - **C++20 compiler**
   - macOS: Apple Clang ≥ 14
-  - Linux: GCC ≥ 11 / Clang ≥ 14
-  - Windows: MSVC (Visual Studio 2022)
+  - Linux: GCC ≥ 11 / Clang ≥ 14 (not tested)
+  - Windows: MSVC (Visual Studio 2022) (not tested)
 - **CMake ≥ 3.20**
 
 > Dependencies (`fmt`, `GoogleTest`) are fetched automatically by CMake.
