@@ -40,13 +40,14 @@ target_compile_features(orderbook_core PUBLIC cxx_std_20)
 target_compile_options(orderbook_core PRIVATE
     $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:Release>:-march=native>
-#    $<$<CONFIG:Release>:-fno-exceptions>
+    $<$<CONFIG:Release>:-fno-exceptions>
     $<$<CONFIG:Release>:-fno-rtti>
     $<$<CONFIG:Release>:-fno-stack-protector>
     $<$<CONFIG:Release>:-finline-functions>
     $<$<CONFIG:Release>:-flto>
     $<$<CONFIG:Release>:-DNDEBUG>
 )
+
 
 # ---- Main executable ----
 add_executable(Orderbook
@@ -64,6 +65,17 @@ add_executable(OrderbookBenchmarks
     src/Benchmarks/SystemInfo.cpp
     src/Benchmarks/Percentiles.cpp
     src/Benchmarks/BenchPrinter.cpp
+)
+
+target_compile_options(OrderbookBenchmarks PRIVATE
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:-march=native>
+#    $<$<CONFIG:Release>:-fno-exceptions>
+    $<$<CONFIG:Release>:-fno-rtti>
+    $<$<CONFIG:Release>:-fno-stack-protector>
+    $<$<CONFIG:Release>:-finline-functions>
+    $<$<CONFIG:Release>:-flto>
+    $<$<CONFIG:Release>:-DNDEBUG>
 )
 
 target_link_libraries(OrderbookBenchmarks PRIVATE

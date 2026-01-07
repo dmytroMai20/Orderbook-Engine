@@ -19,7 +19,7 @@ struct Backpressure {
 
             if (spins < 128) {
                 ++spins;
-                asm volatile("" ::: "memory");
+                std::atomic_signal_fence(std::memory_order_seq_cst);
             } else {
                 spins = 0;
                 std::this_thread::yield();

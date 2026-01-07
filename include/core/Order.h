@@ -45,8 +45,9 @@ public:
     }
     void ToGoodTillCancel(Price price) 
     { 
-        if (GetOrderType() != OrderType::Market)
-            throw std::logic_error("Order cannot have its price adjusted, only market orders can.");
+        if (GetOrderType() != OrderType::Market) {
+            return;
+        }
 
         price_ = price;
         orderType_ = OrderType::GoodTillCancel;
