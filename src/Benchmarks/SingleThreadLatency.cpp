@@ -66,10 +66,10 @@ benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookAddLatency(std::size_t 
     storage.reserve(iterations);
     for (std::size_t i = 0; i < iterations; ++i) {
         storage.emplace_back(OrderType::GoodTillCancel,
-                             static_cast<OrderId>(i + 1),
+                             OrderId{i + 1},
                              Side::Buy,
-                             static_cast<Price>(100),
-                             static_cast<Quantity>(1));
+                             Price{100},
+                             Quantity{1});
     }
 
     std::vector<OrderPointer> orders;
@@ -104,10 +104,10 @@ benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookCancelLatency(std::size
     storage.reserve(iterations);
     for (std::size_t i = 0; i < iterations; ++i) {
         storage.emplace_back(OrderType::GoodTillCancel,
-                             static_cast<OrderId>(i + 1),
+                             OrderId{i + 1},
                              Side::Buy,
-                             static_cast<Price>(100),
-                             static_cast<Quantity>(1));
+                             Price{100},
+                             Quantity{1});
     }
 
     std::vector<OrderPointer> orders;
@@ -124,7 +124,7 @@ benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookCancelLatency(std::size
     samples.reserve(iterations);
 
     for (std::size_t i = 0; i < iterations; ++i) {
-        const OrderId id = static_cast<OrderId>(i + 1);
+        const OrderId id = OrderId{i + 1};
         const auto t0 = std::chrono::steady_clock::now();
         ob.CancelOrder(id);
         const auto t1 = std::chrono::steady_clock::now();
@@ -143,10 +143,10 @@ benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookModifyLatency(std::size
     storage.reserve(iterations);
     for (std::size_t i = 0; i < iterations; ++i) {
         storage.emplace_back(OrderType::GoodTillCancel,
-                             static_cast<OrderId>(i + 1),
+                             OrderId{i + 1},
                              Side::Buy,
-                             static_cast<Price>(100),
-                             static_cast<Quantity>(1));
+                             Price{100},
+                             Quantity{1});
     }
 
     std::vector<OrderPointer> orders;
@@ -163,8 +163,8 @@ benchmarks::LatencyPercentilesNs RunSingleThreadOrderbookModifyLatency(std::size
     samples.reserve(iterations);
 
     for (std::size_t i = 0; i < iterations; ++i) {
-        const OrderId id = static_cast<OrderId>(i + 1);
-        OrderModify mod{id, Side::Buy, static_cast<Price>(101), static_cast<Quantity>(1)};
+        const OrderId id = OrderId{i + 1};
+        OrderModify mod{id, Side::Buy, Price{101}, Quantity{1}};
 
         const auto t0 = std::chrono::steady_clock::now();
         (void)ob.ModifyOrder(mod);
