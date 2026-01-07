@@ -64,7 +64,7 @@ cmake --build build -j
 ./build/OrderbookBenchmarks 200000
 ```
 
-#### Example Output on M2 Mac
+#### Example Output and Results on M2 Mac
 
 ```
 Process priority raised: false
@@ -84,6 +84,8 @@ Orderbook CancelOrder latency (ns): p50=125 p95=125 p99=209 p99.9=750
 Orderbook ModifyOrder latency (ns): p50=250 p95=292 p99=375 p99.9=1834
 ```
 
+Throughput: 3.1m order book operations per second on startup and flatline at 1.1m ops/s after 20 seconds.
+
 ### Implementation Details
 
 - **Location**: `include/Benchmarks/` and `src/Benchmarks/`
@@ -91,7 +93,7 @@ Orderbook ModifyOrder latency (ns): p50=250 p95=292 p99=375 p99.9=1834
 - **Percentiles**: Simple sorting and nearest-rank method
 - **Orderbook benchmarks**: Reuse preallocated `Order` objects to avoid allocation noise
 - **Ring buffer**: Uses `OrderRingBuffer = SPSCQueue<EngineEvent, 16384>`
-- **Concurrency model**: N producers → N SPSC ring buffers → 1 matching engine thread (round-robin drain)
+- **Concurrency model**: N producers → N SPSC ring buffers → 1 matching engine thread (burst round-robin drain)
 
 ---
 
