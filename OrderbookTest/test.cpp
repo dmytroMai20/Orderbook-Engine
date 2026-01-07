@@ -236,7 +236,7 @@ TEST_P(OrderbookTestsFixture, OrderbookTestSuite)
             action.quantity_,
         };
     };
-
+    
     // Act
     Orderbook orderbook;
     for (const auto& action : actions)
